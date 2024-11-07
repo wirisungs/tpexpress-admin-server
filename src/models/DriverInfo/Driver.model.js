@@ -2,66 +2,71 @@ const mongoose = require("mongoose");
 
 const DriverSchema = mongoose.Schema(
   {
-    driver_ID: {
+    driverId: {
       type: String,
       required: true,
       unique: true,
     },
-    driver_Name: {
+    driverName: {
       type: String,
       required: true,
     },
-    driver_Email: {
+    driverEmail: {
+      type: String,
+      default: null,
+    },
+    driverPhone: {
       type: String,
       required: true,
     },
-    driver_Phone: {
+    driverAddress: {
       type: String,
-      required: true,
+      default: null,
     },
-    driver_Address: {
+    driverBirth: {
+      type: Date,
+      default: null,
+    },
+    driverCCCD: {
       type: String,
-      required: true,
+      default: null,
     },
-    driver_Birthday: {
+    driverCCCDDate: {
+      type: Date,
+      default: null,
+    },
+    driverLicenseId: {
       type: String,
-      required: true,
+      default: null,
     },
-    driver_NationalID: {
+    driverLicenseType: {
       type: String,
-      required: true,
+      default: null,
     },
-    driver_DateIssue: {
-      type: String,
-      required: true,
-    },
-    driver_LicenseID: {
-      type: String,
-      required: true,
-    },
-    driver_LicenseType: {
-      type: String,
-      required: true,
-    },
-    driver_LicensePlate: {
+    driverVehicleBSX: {
       // Tham chiếu đến biển số xe trong DB Vehicle
       type: String,
-      required: true,
+      default: null,
     },
-    driver_Gender: {
+    driverGender: {
       type: Number,
       required: true,
       default: 0, // 0: Male, 1: Female
     },
-    driver_Status: {
+    driverStatus: {
       type: Boolean,
       default: false,
     },
-    driver_Violation: {
+    driverViolation: {
       type: Number,
       default: 0,
     },
-    driver_Nationality: {
+    driverNationality: {
+      type: String,
+      required: true,
+      default: "Việt Nam",
+    },
+    userId: {
       type: String,
       required: true,
     },
@@ -70,6 +75,22 @@ const DriverSchema = mongoose.Schema(
     collection: "Driver",
   }
 );
+// DriverSchema.index(
+//   { driverEmail: 1 },
+//   { unique: true, partialFilterExpression: { driverEmail: { $ne: null } } }
+// );
+// DriverSchema.index(
+//   { driverCCCD: 1 },
+//   { unique: true, partialFilterExpression: { driverCCCD: { $ne: null } } }
+// );
+// DriverSchema.index(
+//   { driverLicenseId: 1 },
+//   { unique: true, partialFilterExpression: { driverLicenseId: { $ne: null } } }
+// );
+// DriverSchema.index(
+//   { driverVehicleBSX: 1 },
+//   { unique: true, partialFilterExpression: { driverVehicleBSX: { $ne: null } } }
+// );
 
 const Driver = mongoose.model("Driver", DriverSchema);
 

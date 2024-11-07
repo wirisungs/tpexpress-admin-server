@@ -2,32 +2,33 @@ const mongoose = require("mongoose");
 
 const CustomerSchema = mongoose.Schema(
   {
-    cus_ID: {
+    cusId: {
+      type: String,
+      unique: true,
+    },
+    cusName: {
+      type: String,
+      required: true,
+    },
+    cusEmail: {
       type: String,
       required: true,
       unique: true,
     },
-    cus_Name: {
+    cusPhone: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    cusAddress: {
       type: String,
       required: true,
     },
-    cus_Email: {
+    cusBirthday: {
       type: String,
       required: true,
     },
-    cus_Phone: {
-      type: String,
-      required: true,
-    },
-    cus_Address: {
-      type: String,
-      required: true,
-    },
-    cus_Birthday: {
-      type: String,
-      required: true,
-    },
-    cus_Gender: {
+    cusGender: {
       type: Number,
       required: true,
       default: 0, // 0: Male, 1: Female

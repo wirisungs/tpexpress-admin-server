@@ -2,62 +2,86 @@ const mongoose = require("mongoose");
 
 const OrderSchema = mongoose.Schema(
   {
-    Order_ID: {
+    orderId: {
       type: String,
-      required: true,
       unique: true,
     },
-    Receiver_Phone: {
+    dservicesId: {
       type: String,
       required: true,
     },
-    Receiver_Name: {
+    paymentId: {
+      type: String,
+      required: true,
+      default: "P001",
+    },
+    cusId: {
       type: String,
       required: true,
     },
-    Receiver_Address: {
+    driverId: {
+      type: String,
+      default: "",
+    },
+    orderStatusId: {
+      type: String,
+      default: "ST001",
+      required: true,
+    },
+    senderAddress: {
       type: String,
       required: true,
     },
-    Order_Note: {
+    receiverPhone: {
+      type: String,
+      required: true,
+    },
+    receiverName: {
+      type: String,
+      required: true,
+    },
+    receiverAddress: {
+      type: String,
+      required: true,
+    },
+    createdDate: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    orderIsFragile: {
+      type: Boolean,
+      default: false,
+    },
+    orderNote: {
       type: String,
     },
-    Order_COD: {
+    orderCOD: {
+      type: Number,
+      default: 0,
+    },
+    deliverPrice: {
       type: Number,
       required: true,
+      default: 0,
     },
-    Order_TotalPrice: {
-      type: Number,
-      required: true,
-    },
-    Order_Type: {
+    orderType: {
       type: String,
       enum: ["Nội thành", "Ngoại thành"], // Giới hạn loại đơn hàng
       required: true,
     },
-    Order_Status: {
+    proofSuccess: {
       type: String,
-      enum: ["Đã hủy", "Đang giao", "Đã giao"], // Giới hạn trạng thái đơn hàng
-      required: true,
+      default: "",
     },
-    Services_ID: {
+    reasonFailed: {
       type: String,
-      required: true,
+      default: "",
     },
-    Voucher_ID: {
-      type: String,
-    },
-    Payment_ID: {
-      type: String,
+    totalPrice: {
+      type: Number,
       required: true,
-    },
-    Cus_ID: {
-      type: String,
-      required: true,
-    },
-    Driver_ID: {
-      type: String,
-      required: true,
+      default: 0,
     },
   },
   {

@@ -12,6 +12,7 @@ const userRoute = require("./src/routes/UserInfo/User.route");
 const orderRoute = require("./src/routes/OrderInfo/Order.route");
 const driverRoute = require("./src/routes/DriverInfo/Driver.route");
 const customerRoute = require("./src/routes/CustomerInfo/Customer.route");
+const requestRoute = require("./src/routes/RequestInfo/Request.route");
 
 //db connection
 const db = require("./src/config/db.mongo.config");
@@ -32,6 +33,7 @@ app.use("/api/user", userRoute);
 app.use("/api/order", orderRoute);
 app.use("/api/driver", driverRoute);
 app.use("/api/customer", customerRoute);
+app.use("/api/request", requestRoute);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

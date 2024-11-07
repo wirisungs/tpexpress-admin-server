@@ -2,19 +2,33 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    phonenumber: {
+    userId: {
       type: String,
       required: true,
       unique: true,
     },
-    password: {
+    userPhone: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    userPassword: {
       type: String,
       required: true,
     },
-    employee: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
+    userStatus: {
+      type: String,
       required: true,
+      default: "deactive",
+    },
+    userRole: {
+      type: String,
+      ref: "Role",
+      required: true,
+    },
+    userVerify: {
+      type: Boolean,
+      default: false,
     },
   },
   { collection: "User" }

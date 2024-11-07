@@ -2,5 +2,7 @@ const CustomerController = require("../../controllers/CustomerInfo/Customer.cont
 
 const router = require("express").Router();
 
-router.get("/Customers", CustomerController.getAllCustomers);
+router.get("/", CustomerController.getAllCustomers);
+router.get("/:id", CustomerController.getACustomer);
+router.post("/create", CustomerController.createCustomer);
 module.exports = router;
