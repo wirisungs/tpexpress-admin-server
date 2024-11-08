@@ -159,6 +159,29 @@ const UserController = {
       res.status(500).json(error.message);
     }
   },
+  login: async (req, res) => {
+    try {
+      const { userPhone, userPassword } = req.body;
+      const user = await User.findOne({ userPhone: userPhone });
+      if (!user) {
+        return res.status(400).json({ message: "Người dùng không tồn tại!" });
+      }
+
+      console.log(userPassword, user.userPassword);
+      const isPasswordMatch = await bcrypt.compare(
+        userPassword,
+        user.userPassword
+      );
+      if (!isPasswordMatch) {
+        return res.status(400).json({ message: "Mật khẩu không đúng!" });
+      }
+      return res
+        .status(200)
+        .json({ message: "Đăng nhập thành công!", code: "Success" });
+    } catch (error) {
+      res.status(500).json(error.message);
+    }
+  },
 };
 
 module.exports = UserController;
