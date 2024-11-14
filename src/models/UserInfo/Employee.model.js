@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const EmployeeSchema = mongoose.Schema(
   {
-    employeeID: {
+    employeeId: {
       type: String,
       required: true,
       unique: true,
@@ -11,9 +11,21 @@ const EmployeeSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    role: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Role",
+    employeeEmail: {
+      type: String,
+      default: null,
+    },
+    employeePhone: {
+      type: String,
+      default: null,
+    },
+    userStatus: {
+      type: String,
+      required: true,
+      default: "deactive",
+    },
+    userId: {
+      type: String,
       required: true,
     },
   },

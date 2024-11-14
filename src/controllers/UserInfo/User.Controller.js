@@ -3,6 +3,12 @@ const Role = require("../../models/UserInfo/Role.model");
 const Employee = require("../../models/UserInfo/Employee.model");
 const bcrypt = require("bcrypt");
 const Driver = require("../../models/DriverInfo/Driver.model");
+const jwt = require("jsonwebtoken");
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
+
+const employeeRoleList = ["Admin", "Saleperson", "Supporter"];
 
 const genarateUserID = async () => {
   let id;
@@ -36,7 +42,23 @@ const genarateDriverID = async () => {
       isUnique = true;
     }
   }
+  return id;
+};
 
+const genarateEmployeeID = async () => {
+  let id;
+  let isUnique = false;
+
+  while (!isUnique) {
+    const randomParts = Math.floor(10000000 + Math.random() * 90000000);
+    id = `TX${randomParts}`;
+
+    // Kiểm tra tồn tại
+    const existingDriver = await Driver.findOne({ driverId: id });
+    if (!existingDriver) {
+      isUnique = true;
+    }
+  }
   return id;
 };
 
@@ -64,8 +86,9 @@ const UserController = {
         userRole: userRole,
       });
 
-      // Tạo driver mới khi tạo user
+      // Tạo driver và employee mới khi tạo user
       let newDriver = null;
+      let newEmployee = null;
 
       if (userRole === "Driver") {
         // Kiểm tra tồn tại email
@@ -87,10 +110,42 @@ const UserController = {
         });
 
         await newDriver.save();
+      } else if (employeeRoleList.includes(userRole)) {
+        // Kiểm tra tồn tại email
+        const checkEmailFromDriver = await Driver.findOne({
+          driverEmail: userEmail,
+        });
+        const checkEmailFromEmployee = await Employee.findOne({
+          employeeEmail: userEmail,
+        });
+
+        if (checkEmailFromDriver || checkEmailFromEmployee) {
+          return res.status(400).json({ message: "Email đã tồn tại!" });
+        }
+
+        // Tạo mã tài xế
+        const employeeId = await genarateEmployeeID();
+
+        newEmployee = new Employee({
+          employeeId: employeeId,
+          employeeName: userFullname,
+          employeeEmail: userEmail,
+          employeePhone: userPhone,
+          userId: userId, // Gán userId trong bảng employee là userId trong bảng User
+        });
+
+        console.log(newEmployee);
+        await newEmployee.save();
+      } else {
+        return res.status(400).json({ message: "Role không hợp lệ" });
       }
 
       await newUser.save();
-      return res.status(200).json({ newUser, newDriver });
+      if (newDriver !== null) {
+        return res.status(200).json({ newUser, newDriver });
+      } else if (newEmployee !== null) {
+        return res.status(200).json({ newUser, newEmployee });
+      }
     } catch (error) {
       return res.status(500).json(error.message);
     }
@@ -128,16 +183,19 @@ const UserController = {
       ]);
 
       const result = users.map((user) => {
-        let info = null;
+        let driverInfo = null;
+        let employeeInfo;
 
         if (user.userRole === "Driver") {
-          info = drivers.find(
+          driverInfo = drivers.find(
             (driver) => driver.userId.toString() === user.userId.toString()
           );
         }
-        // else if(user.userRole === "Employee"){
-        //   info = employees.find(employee => employee.userId.equals(user.userId))
-        // }
+        if (employeeRoleList.includes(user.userRole)) {
+          employeeInfo = employees.find(
+            (employee) => employee.userId.toString() === user.userId.toString()
+          );
+        }
 
         return {
           userId: user.userId,
@@ -146,7 +204,8 @@ const UserController = {
           userPassword: user.userPassword,
           userVerify: user.userVerify,
           userStatus: user.userStatus,
-          infoDetail: info || null, // Nếu không có thông tin thì trả về null
+          driverDetail: driverInfo || null, // Nếu không có thông tin thì trả về null
+          employeeDetail: employeeInfo || null, // Nếu không có thông tin thì trả về null
         };
       });
 
@@ -166,8 +225,6 @@ const UserController = {
       if (!user) {
         return res.status(400).json({ message: "Người dùng không tồn tại!" });
       }
-
-      console.log(userPassword, user.userPassword);
       const isPasswordMatch = await bcrypt.compare(
         userPassword,
         user.userPassword
@@ -175,11 +232,60 @@ const UserController = {
       if (!isPasswordMatch) {
         return res.status(400).json({ message: "Mật khẩu không đúng!" });
       }
-      return res
-        .status(200)
-        .json({ message: "Đăng nhập thành công!", code: "Success" });
+
+      const sessionToken = jwt.sign(
+        {
+          userId: user.userId,
+        },
+        process.env.JWT_SECRET
+      );
+
+      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+      const session = await prisma.session.create({
+        data: {
+          accountId: user.userId,
+          token: sessionToken,
+          expiresAt,
+        },
+      });
+      return res.status(200).json({
+        message: "Đăng nhập thành công!",
+        code: "Success",
+        user,
+        session,
+      });
     } catch (error) {
       res.status(500).json(error.message);
+    }
+  },
+  getMe: async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(" ")[1];
+      console.log(token);
+      if (!token) {
+        return res.status(401).json({ message: "Không tìm thấy token" });
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.userId;
+
+      const user = await User.findOne({ userId: userId });
+      const employee = await Driver.findOne({ userId: userId });
+      console.log(user);
+      console.log(employee);
+      if (!user) {
+        return res.status(404).json({ message: "Người dùng không tồn tại" });
+      }
+      return res.status(200).json({
+        data: {
+          userPhone: user.userPhone,
+          userRole: user.userRole,
+          userName: employee.driverName,
+        },
+        message: "Lấy thông tin thành công",
+      });
+    } catch (error) {
+      return res.status(500).json(error.message);
     }
   },
 };

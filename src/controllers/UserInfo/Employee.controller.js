@@ -27,6 +27,19 @@ const EmployeeController = {
       return res.status(500).json(error.message);
     }
   },
+
+  // GetAllEmployee
+  getAllEmployee: async (req, res) => {
+    try {
+      const employees = await Employee.find();
+      if (!employees || employees.length === 0) {
+        return res.status(400).json({ message: "Không có nhân viên" });
+      }
+      res.status(200).json(employees);
+    } catch (error) {
+      return res.status(500).json(error.message);
+    }
+  },
 };
 
 module.exports = EmployeeController;
