@@ -234,6 +234,50 @@ const DriverController = {
       res.status(500).json(error.message);
     }
   },
+  updateDriverById: async (req, res) => {
+    try {
+      const { id } = req.params; // Đây là driverId tùy chỉnh
+      const updateFields = req.body;
+
+      // Tìm tài xế dựa trên driverId tùy chỉnh
+      const driver = await Driver.findOne({ driverId: id });
+
+      if (!driver) {
+        return res.status(404).json({ message: "Tài xế không tồn tại" });
+      }
+
+      const updateData = {};
+      for (const key in updateFields) {
+        // Chỉ cập nhật các trường có giá trị khác với giá trị hiện tại
+        if (
+          (driver[key] === null || driver[key] !== updateFields[key]) &&
+          updateFields[key] !== undefined &&
+          updateFields[key] !== ""
+        ) {
+          updateData[key] = updateFields[key];
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Không có trường nào cần cập nhật" });
+      }
+
+      // Cập nhật tài xế dựa trên driverId
+      const updatedDriver = await Driver.findOneAndUpdate(
+        { driverId: id },
+        updateData,
+        { new: true }
+      );
+
+      res
+        .status(200)
+        .json({ message: "Cập nhật thành công", data: updatedDriver });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
 };
 
 module.exports = DriverController;
