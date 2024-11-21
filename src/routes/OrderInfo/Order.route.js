@@ -6,8 +6,9 @@ const {
 const router = require("express").Router();
 
 router.get("/", OrderController.getAllOrders);
-router.get("/:id", OrderController.getOrderByCusId);
+router.get("/count", OrderController.countOrderByStatus);
+router.get("/getOrder5Days", OrderController.getOrdersInLast5Days);
 router.post("/create", OrderController.createOrder);
 router.get("/services/dservices", DServiceController.getAllServices);
-
+router.get("/:id", OrderController.getOrderByCusId);
 module.exports = router;

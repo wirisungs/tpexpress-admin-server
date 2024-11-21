@@ -236,10 +236,9 @@ const DriverController = {
   },
   updateDriverById: async (req, res) => {
     try {
-      const { id } = req.params; // Đây là driverId tùy chỉnh
+      const { id } = req.params;
       const updateFields = req.body;
 
-      // Tìm tài xế dựa trên driverId tùy chỉnh
       const driver = await Driver.findOne({ driverId: id });
 
       if (!driver) {
@@ -261,7 +260,7 @@ const DriverController = {
       if (Object.keys(updateData).length === 0) {
         return res
           .status(400)
-          .json({ message: "Không có trường nào cần cập nhật" });
+          .json({ message: "Không có trường nào cập nhật" });
       }
 
       // Cập nhật tài xế dựa trên driverId
@@ -276,6 +275,34 @@ const DriverController = {
         .json({ message: "Cập nhật thành công", data: updatedDriver });
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  },
+
+  getDriverByQuery: async (req, res) => {
+    try {
+      const { id, email, phone } = req.query;
+      if (!id && !email && !phone) {
+        return res.status(400).json({ message: "Tài xế không tồn tại!" });
+      }
+
+      let searchCondition = {};
+      if (id) {
+        searchCondition = { driverId: id.trim() };
+      } else if (email) {
+        searchCondition = { driverEmail: email.trim() };
+      } else if (phone) {
+        searchCondition = { driverPhone: phone.trim() };
+      }
+      const driver = await Driver.findOne(searchCondition);
+      if (!driver) {
+        return res.status(404).json({
+          message: "Tài xế không tồn tại!",
+          search: searchCondition,
+        });
+      }
+      return res.status(200).json(driver);
+    } catch (error) {
+      res.status(500).json(error.message);
     }
   },
 };

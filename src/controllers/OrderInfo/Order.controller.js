@@ -230,6 +230,88 @@ const OrderController = {
       return res.status(500).json(error.message);
     }
   },
+
+  countOrderByStatus: async (req, res) => {
+    try {
+      const counts = await Order.aggregate([
+        {
+          $match: {
+            orderStatusId: { $in: ["ST001", "ST003", "ST004", "ST002"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$orderStatusId",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+      const result = {
+        Pending: 0,
+        Delivering: 0,
+        Success: 0,
+        Canceled: 0,
+      };
+
+      counts.forEach((item) => {
+        if (item._id === "ST001") result.Pending = item.count;
+        else if (item._id === "ST002") result.Delivering = item.count;
+        else if (item._id === "ST003") result.Success = item.count;
+        else if (item._id === "ST004") result.Canceled = item.count;
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json(error.message);
+    }
+  },
+  getOrdersInLast5Days: async (req, res) => {
+    try {
+      // Lấy ngày hiện tại và 5 ngày trước
+      const today = new Date();
+      const fiveDaysAgo = new Date(today);
+      fiveDaysAgo.setDate(today.getDate() - 6); // Lấy ngày 5 ngày trước
+
+      // Truy vấn để lấy tổng tiền mỗi ngày trong 5 ngày gần nhất
+      const result = await Order.aggregate([
+        {
+          // Lọc các đơn hàng có createdDate trong 5 ngày gần nhất
+          $match: {
+            createdDate: { $gte: fiveDaysAgo, $lte: today },
+          },
+        },
+        {
+          // Chuyển ngày thành định dạng ngày (loại bỏ giờ, phút, giây)
+          $project: {
+            date: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdDate" },
+            },
+            deliverPrice: 1,
+          },
+        },
+        {
+          // Nhóm theo ngày và tính tổng tiền cho mỗi ngày
+          $group: {
+            _id: "$date",
+            deliverPrice: { $sum: "$deliverPrice" },
+          },
+        },
+        {
+          // Sắp xếp theo ngày (từ mới nhất đến cũ nhất)
+          $sort: { _id: -1 },
+        },
+        {
+          // Giới hạn chỉ lấy 5 ngày gần nhất
+          $limit: 5,
+        },
+      ]);
+
+      // Gửi kết quả về frontend
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi truy vấn: " + error.message });
+    }
+  },
 };
 
 const DServiceController = {

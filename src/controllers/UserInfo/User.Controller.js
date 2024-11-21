@@ -28,6 +28,28 @@ const genarateUserID = async () => {
   return id;
 };
 
+// Hàm kiểm tra regex số điện thoại Việt Nam
+const regexPhoneNumber = (phoneNumber) => {
+  const regexPhoneNumber = /(84|0[3|5|7|8|9])+([0-9]{8})\b/g;
+
+  return phoneNumber.match(regexPhoneNumber) ? true : false;
+};
+
+// Hàm kiểm tra regex số Gmail
+const regexGmail = (gmail) => {
+  const regexGmail = /^[a-z0-9](\.?[a-z0-9]){5,}@g(oogle)?mail\.com$/i;
+
+  return gmail.match(regexGmail) ? true : false;
+};
+
+// Hàm kiểm tra bảo mật cuẩ password
+const checkPasswordStrong = (password) => {
+  const regexPassword =
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+
+  return password.match(regexPassword) ? true : false;
+};
+
 const genarateDriverID = async () => {
   let id;
   let isUnique = false;
@@ -73,10 +95,22 @@ const UserController = {
       // Mã hóa password
       const hashedPassword = await bcrypt.hash(userPassword, 10);
 
-      // Kiểm tra tồn tài số điện thoại
+      // Kiểm tra cấu trúc số điện thoại Việt nam
       const phoneExisted = await User.findOne({ userPhone: userPhone });
+      if (!regexPhoneNumber(userPhone)) {
+        return res.status(400).json({ message: "Số điện thoại không hợp lệ!" });
+      }
+      // Kiểm tra tồn tài số điện thoại
       if (phoneExisted) {
         return res.status(400).json({ message: "Số điện thoại đã tồn tại!" });
+      }
+      // Kiểm tra độ bảo mật của password
+      if (!checkPasswordStrong(userPassword)) {
+        return res.status(400).json({ message: "Mật khẩu chưa an toàn!" });
+      }
+      // Kiểm tra cấu trúc gmail
+      if (!regexGmail(userEmail)) {
+        return res.status(400).json({ message: "Email không hợp lệ!" });
       }
 
       const newUser = new User({
@@ -144,11 +178,11 @@ const UserController = {
       if (newDriver !== null) {
         return res
           .status(200)
-          .json({ message: "Đăng ký thành công", newUser, newDriver });
+          .json({ message: "Tạo tài khoản thành công!", newUser, newDriver });
       } else if (newEmployee !== null) {
         return res
           .status(200)
-          .json({ message: "Đăng ký thành công!", newUser, newEmployee });
+          .json({ message: "Tạo tài khoản thành công!", newUser, newEmployee });
       }
     } catch (error) {
       return res.status(500).json(error.message);
@@ -231,6 +265,9 @@ const UserController = {
       const { userPhone, userPassword } = req.body;
       const user = await User.findOne({ userPhone: userPhone });
       if (!user) {
+        return res.status(400).json({ message: "Người dùng không tồn tại!" });
+      }
+      if (user.userRole === "Driver") {
         return res.status(400).json({ message: "Người dùng không tồn tại!" });
       }
       const isPasswordMatch = await bcrypt.compare(

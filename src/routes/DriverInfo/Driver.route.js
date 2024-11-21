@@ -4,6 +4,7 @@ const VehicleController = require("../../controllers/DriverInfo/Vehicle.controll
 const router = require("express").Router();
 
 router.get("/", DriverController.getAllDriver);
+router.get("/dri", DriverController.getDriverByQuery);
 router.get("/:id", DriverController.getDriverById);
 router.get("/checkuser/:userId", DriverController.checkDriver);
 router.post("/create", DriverController.enrollNewDriver);

@@ -16,7 +16,7 @@ const RequestSchema = mongoose.Schema(
     },
     Driver_ID: {
       type: String,
-      required: true,
+      default: null,
     },
     Request_Picture: {
       type: String,
@@ -32,7 +32,7 @@ const RequestSchema = mongoose.Schema(
 
     Request_Type: {
       type: String,
-      enum: ["HBV", "HBL", "HCG", "CNT"], // HBV: Hàng bị vỡ, HBL: Hàng bị lạc, HCG: Hàng chưa giao, CNT: "Chưa nhận tiền"
+      enum: ["HBV", "HBL", "HCVC", "CNT"], // HBV: Hàng bị vỡ, HBL: Hàng bị lạc, HCG: Hàng chưa giao, CNT: "Chưa nhận tiền"
     },
   },
   {

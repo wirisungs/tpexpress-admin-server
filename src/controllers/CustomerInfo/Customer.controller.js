@@ -68,11 +68,41 @@ const CustomerController = {
   },
 
   // Get a customer
-  getACustomer: async (req, res) => {
+  // getACustomer: async (req, res) => {
+  //   try {
+  //     const customer = await Customer.findOne({ cusId: req.params.id });
+  //     if (!customer) {
+  //       return res.status(400).json({ message: "Khách hàng không tồn tại" });
+  //     }
+  //     return res.status(200).json(customer);
+  //   } catch (error) {
+  //     return res.status(500).json(error.message);
+  //   }
+  // },
+
+  // Get a customer with query
+  getACustomerWithQuery: async (req, res) => {
     try {
-      const customer = await Customer.findOne({ cusId: req.params.id });
+      const { id, email, phone } = req.query;
+
+      if (!id && !email && !phone) {
+        return res.status(400).json({ message: "Khách hàng không tồn tại!" });
+      }
+
+      let searchCondition = {};
+      if (id) {
+        searchCondition = { cusId: id.trim() };
+      } else if (email) {
+        searchCondition = { cusEmail: email.trim() };
+      } else if (phone) {
+        searchCondition = { cusPhone: phone.trim() };
+      }
+      const customer = await Customer.findOne(searchCondition);
       if (!customer) {
-        return res.status(400).json({ message: "Khách hàng không tồn tại" });
+        return res.status(404).json({
+          message: "Khách hàng không tồn tại!",
+          search: searchCondition,
+        });
       }
       return res.status(200).json(customer);
     } catch (error) {
