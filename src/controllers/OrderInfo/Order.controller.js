@@ -1,6 +1,7 @@
 const Order = require("../../models/OrderInfo/Order.model");
 const Customer = require("../../models/CustomerInfo/Customer.model");
 const DServices = require("../../models/OrderInfo/DService.model");
+const moment = require("moment");
 
 // Hàm random ID mã Order
 function generateOrderID(length = 10) {
@@ -12,6 +13,17 @@ function generateOrderID(length = 10) {
   }
   return orderId;
 }
+
+Date.prototype.GetFirstDayOfWeek = function () {
+  this.setHours(0, 0, 0, 0);
+  return new Date(
+    this.setDate(this.getDate() - this.getDay() + (this.getDay() == 0 ? -6 : 1))
+  );
+};
+Date.prototype.GetLastDayOfWeek = function () {
+  this.setHours(0, 0, 0, 0);
+  return new Date(this.setDate(this.getDate() - this.getDay() + 7));
+};
 
 // OrderController
 const OrderController = {
@@ -265,17 +277,17 @@ const OrderController = {
       res.status(500).json(error.message);
     }
   },
-  getOrdersInLast5Days: async (req, res) => {
+  getOrdersInLast7Days: async (req, res) => {
     try {
-      // Lấy ngày hiện tại và 5 ngày trước
+      // Lấy ngày hiện tại và 7 ngày trước
       const today = new Date();
       const fiveDaysAgo = new Date(today);
-      fiveDaysAgo.setDate(today.getDate() - 6); // Lấy ngày 5 ngày trước
+      fiveDaysAgo.setDate(today.getDate() - 9); // Lấy ngày 7 ngày trước
 
-      // Truy vấn để lấy tổng tiền mỗi ngày trong 5 ngày gần nhất
+      // Truy vấn để lấy tổng tiền mỗi ngày trong 7 ngày gần nhất
       const result = await Order.aggregate([
         {
-          // Lọc các đơn hàng có createdDate trong 5 ngày gần nhất
+          // Lọc các đơn hàng có createdDate trong 7 ngày gần nhất
           $match: {
             createdDate: { $gte: fiveDaysAgo, $lte: today },
           },
@@ -301,8 +313,8 @@ const OrderController = {
           $sort: { _id: -1 },
         },
         {
-          // Giới hạn chỉ lấy 5 ngày gần nhất
-          $limit: 5,
+          // Giới hạn chỉ lấy 7 ngày gần nhất
+          $limit: 7,
         },
       ]);
 
@@ -310,6 +322,63 @@ const OrderController = {
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({ message: "Lỗi truy vấn: " + error.message });
+    }
+  },
+  getRankingOfWeek: async (req, res) => {
+    var today = new Date();
+    console.log(today.GetFirstDayOfWeek(), today.GetLastDayOfWeek());
+    try {
+      const rankings = await Order.aggregate([
+        {
+          $match: {
+            orderStatusId: "ST003", // Lọc các đơn hàng có trạng thái hoàn thành
+            driverId: { $ne: null }, // Loại bỏ các đơn hàng không có tài xế
+            createdDate: {
+              $gte: today.GetFirstDayOfWeek(),
+              $lte: today.GetLastDayOfWeek(),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$driverId", // Nhóm theo driverId
+            completedOrdersCount: { $sum: 1 }, // Tính tổng số đơn hàng hoàn thành cho mỗi tài xế
+          },
+        },
+        {
+          $sort: { completedOrdersCount: -1 }, // Sắp xếp giảm dần theo số lượng đơn hoàn thành
+        },
+        {
+          $limit: 5, // Lấy 5 tài xế hàng đầu
+        },
+        {
+          $lookup: {
+            from: "Driver",
+            localField: "_id",
+            foreignField: "driverId",
+            as: "driverDetails",
+          },
+        },
+        {
+          $unwind: "$driverDetails",
+        },
+
+        {
+          $project: {
+            driverName: "$driverDetails.driverName",
+            completedOrdersCount: 1,
+          },
+        },
+      ]);
+
+      // Kiểm tra nếu không có kết quả
+      if (!rankings || rankings.length === 0) {
+        return res.status(400).json({ message: "Không có dữ liệu" });
+      }
+
+      res.status(200).json(rankings);
+    } catch (error) {
+      res.status(500).json({ error: error.message }); // Xử lý lỗi
     }
   },
 };

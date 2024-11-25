@@ -66,6 +66,10 @@ const DriverSchema = mongoose.Schema(
       required: true,
       default: "Việt Nam",
     },
+    driverAvatar: {
+      type: String,
+      default: null,
+    },
     userId: {
       type: String,
       required: true,

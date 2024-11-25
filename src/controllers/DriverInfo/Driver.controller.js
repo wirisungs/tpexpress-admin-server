@@ -1,5 +1,6 @@
 const Driver = require("../../models/DriverInfo/Driver.model");
 const User = require("../../models/UserInfo/User.model");
+const cloudinary = require("cloudinary").v2;
 
 const formatDate = (datetime) => {
   const date = new Date(datetime);
@@ -303,6 +304,42 @@ const DriverController = {
       return res.status(200).json(driver);
     } catch (error) {
       res.status(500).json(error.message);
+    }
+  },
+  updateAvatar: async (req, res) => {
+    try {
+      const { driverAvatar } = req.body;
+      const driver = await Driver.findOneAndUpdate(
+        { driverId: req.params.id },
+        { driverAvatar: driverAvatar },
+        { new: true }
+      );
+      if (!driver) {
+        return res.status(400).json({ message: "Tài xế không tồn tại!" });
+      }
+      res.status(200).json({ message: "Cập nhật thành công!", driver });
+    } catch (error) {
+      res.status(400).json(error);
+    }
+  },
+  addDriverAvatarField: async (req, res) => {
+    try {
+      const result = await Driver.updateMany(
+        {}, // Điều kiện: tất cả các đối tượng
+        { $set: { driverAvatar: "" } } // Thêm trường driverAvatar với giá trị mặc định ""
+      );
+
+      // Phản hồi kết quả
+      res.status(200).json({
+        message: "Thêm trường driverAvatar cho tất cả tài xế thành công!",
+        modifiedCount: result.modifiedCount, // Số lượng đối tượng được cập nhật
+      });
+    } catch (error) {
+      console.error("Error updating drivers:", error.message);
+      res.status(500).json({
+        message: "Đã xảy ra lỗi khi cập nhật driverAvatar!",
+        error: error.message,
+      });
     }
   },
 };

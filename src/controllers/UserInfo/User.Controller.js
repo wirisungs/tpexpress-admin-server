@@ -8,7 +8,7 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const employeeRoleList = ["Admin", "Saleperson", "Supporter"];
+const employeeRoleList = ["Admin", "Saleman", "Support"];
 
 const genarateUserID = async () => {
   let id;
@@ -144,7 +144,7 @@ const UserController = {
         });
 
         await newDriver.save();
-      } else if (employeeRoleList.includes(userRole)) {
+      } else if (userRole !== "Driver") {
         // Kiểm tra tồn tại email
         const checkEmailFromDriver = await Driver.findOne({
           driverEmail: userEmail,
@@ -214,21 +214,14 @@ const UserController = {
       const EmployeePromise = Employee.find({});
       const DriverPromise = Driver.find({});
 
-      const [users, employees, drivers] = await Promise.all([
+      const [users, employees] = await Promise.all([
         UserPromise,
         EmployeePromise,
         DriverPromise,
       ]);
 
       const result = users.map((user) => {
-        let driverInfo = null;
         let employeeInfo;
-
-        if (user.userRole === "Driver") {
-          driverInfo = drivers.find(
-            (driver) => driver.userId.toString() === user.userId.toString()
-          );
-        }
         if (employeeRoleList.includes(user.userRole)) {
           employeeInfo = employees.find(
             (employee) => employee.userId.toString() === user.userId.toString()
@@ -240,21 +233,14 @@ const UserController = {
           userPhone: user.userPhone,
           userRole: user.userRole,
           userPassword: user.userPassword,
-          userVerify: user.userVerify,
           userStatus: user.userStatus,
-          driverDetail: driverInfo || null, // Nếu không có thông tin thì trả về null
-          employeeDetail: employeeInfo || null, // Nếu không có thông tin thì trả về null
+          employeeDetail: employeeInfo || null,
         };
       });
 
-      if (
-        result.every(
-          (user) => user.driverDetail === null && user.employeeDetail
-        )
-      ) {
+      if (result.length === 0) {
         return res.status(200).json({ message: "Chưa có tài khoản nào!" });
       }
-
       return res.status(200).json(result);
     } catch (error) {
       res.status(500).json(error.message);
@@ -264,6 +250,13 @@ const UserController = {
     try {
       const { userPhone, userPassword } = req.body;
       const user = await User.findOne({ userPhone: userPhone });
+      const employee = await Employee.findOne({ userId: user.userId });
+      const employeeFullName = employee.employeeName;
+      if (!employee) {
+        return res
+          .status(400)
+          .json({ message: "Tài khoản chưa có thông tin!" });
+      }
       if (!user) {
         return res.status(400).json({ message: "Người dùng không tồn tại!" });
       }
@@ -298,8 +291,40 @@ const UserController = {
         message: "Đăng nhập thành công!",
         code: "Success",
         user,
+        employeeFullName,
         session,
       });
+    } catch (error) {
+      res.status(500).json(error.message);
+    }
+  },
+  getUserByQuery: async (req, res) => {
+    try {
+      const { id, email, phone } = req.query;
+      if (!id && !email && !phone) {
+        return res.status(400).json({ message: "Tài khoản không tồn tại!" });
+      }
+
+      let searchCondition = {};
+      if (id) {
+        searchCondition = { userId: id.trim() };
+      } else if (email) {
+        searchCondition = { userEmail: email.trim() };
+      } else if (phone) {
+        searchCondition = { userPhone: phone.trim() };
+      }
+      const user = await User.findOne(searchCondition);
+      if (!user) {
+        return res.status(400).json({ message: "Tài khoản không tồn tại!" });
+      }
+      const employee = await Employee.findOne({ userId: user.userId });
+      if (!driver) {
+        return res.status(404).json({
+          message: "Tài xế không tồn tại!",
+          search: searchCondition,
+        });
+      }
+      return res.status(200).json(driver);
     } catch (error) {
       res.status(500).json(error.message);
     }
@@ -315,7 +340,7 @@ const UserController = {
       const userId = decoded.userId;
 
       const user = await User.findOne({ userId: userId });
-      const employee = await Driver.findOne({ userId: userId });
+      const employee = await Employee.findOne({ userId: userId });
       console.log(user);
       console.log(employee);
       if (!user) {
@@ -325,7 +350,7 @@ const UserController = {
         data: {
           userPhone: user.userPhone,
           userRole: user.userRole,
-          userName: employee.driverName,
+          userName: employee.employeeName,
         },
         message: "Lấy thông tin thành công",
       });

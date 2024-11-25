@@ -1,10 +1,11 @@
 const DriverController = require("../../controllers/DriverInfo/Driver.controller");
-const VehicleController = require("../../controllers/DriverInfo/Vehicle.controller");
 
 const router = require("express").Router();
 
 router.get("/", DriverController.getAllDriver);
 router.get("/dri", DriverController.getDriverByQuery);
+router.post("/addField", DriverController.addDriverAvatarField);
+router.put("/updateAvatar/:id", DriverController.updateAvatar);
 router.get("/:id", DriverController.getDriverById);
 router.get("/checkuser/:userId", DriverController.checkDriver);
 router.post("/create", DriverController.enrollNewDriver);
