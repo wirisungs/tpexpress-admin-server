@@ -1,4 +1,6 @@
 const Customer = require("../../models/CustomerInfo/Customer.model");
+const Employee = require("../../models/UserInfo/Employee.model");
+const User = require("../../models/UserInfo/User.model");
 
 const genarateCusID = async () => {
   let id;
@@ -67,19 +69,6 @@ const CustomerController = {
     }
   },
 
-  // Get a customer
-  // getACustomer: async (req, res) => {
-  //   try {
-  //     const customer = await Customer.findOne({ cusId: req.params.id });
-  //     if (!customer) {
-  //       return res.status(400).json({ message: "Khách hàng không tồn tại" });
-  //     }
-  //     return res.status(200).json(customer);
-  //   } catch (error) {
-  //     return res.status(500).json(error.message);
-  //   }
-  // },
-
   // Get a customer with query
   getACustomerWithQuery: async (req, res) => {
     try {
@@ -107,6 +96,46 @@ const CustomerController = {
       return res.status(200).json(customer);
     } catch (error) {
       return res.status(500).json(error.message);
+    }
+  },
+
+  // Update customer details
+  updateACustomerById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateFields = req.body;
+
+      const customer = await Customer.findOne({ cusId: id });
+      if (!customer) {
+        return res.status(400).json({ message: "Khách hàng không tồn tại!" });
+      }
+      const updateData = {};
+      for (const key in updateFields) {
+        // Chỉ cập nhật các trường có giá trị khác với giá trị hiện tại
+        if (
+          (customer[key] === null || customer[key] !== updateFields[key]) &&
+          updateFields[key] !== undefined &&
+          updateFields[key] !== ""
+        ) {
+          updateData[key] = updateFields[key];
+        }
+      }
+      if (Object.keys(updateData).length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Không có trường nào cập nhật" });
+      }
+
+      const updatedCustomer = await Customer.findOneAndUpdate(
+        { cusId: id },
+        updateData,
+        { new: true }
+      );
+      res
+        .status(200)
+        .json({ message: "Cập nhật thành công!", data: updatedCustomer });
+    } catch (error) {
+      res.status(500).json(error.message);
     }
   },
 };

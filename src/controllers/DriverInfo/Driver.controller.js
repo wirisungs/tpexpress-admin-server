@@ -283,7 +283,7 @@ const DriverController = {
     try {
       const { id, email, phone } = req.query;
       if (!id && !email && !phone) {
-        return res.status(400).json({ message: "Tài xế không tồn tại!" });
+        return res.status(400).json({ message: "Vui lòng nhập thông tin!" });
       }
 
       let searchCondition = {};

@@ -210,23 +210,19 @@ const UserController = {
   },
   getAllUser: async (req, res) => {
     try {
-      const UserPromise = User.find({});
-      const EmployeePromise = Employee.find({});
-      const DriverPromise = Driver.find({});
+      const users = await User.find({ userRole: { $in: employeeRoleList } });
 
-      const [users, employees] = await Promise.all([
-        UserPromise,
-        EmployeePromise,
-        DriverPromise,
-      ]);
+      if (users.length === 0) {
+        return res.status(200).json({ message: "Chưa có tài khoản nào!" });
+      }
+
+      const userIds = users.map((user) => user.userId.toString());
+      const employees = await Employee.find({ userId: { $in: userIds } });
 
       const result = users.map((user) => {
-        let employeeInfo;
-        if (employeeRoleList.includes(user.userRole)) {
-          employeeInfo = employees.find(
-            (employee) => employee.userId.toString() === user.userId.toString()
-          );
-        }
+        const employeeInfo = employees.find(
+          (employee) => employee.userId.toString() === user.userId.toString()
+        );
 
         return {
           userId: user.userId,
@@ -238,9 +234,6 @@ const UserController = {
         };
       });
 
-      if (result.length === 0) {
-        return res.status(200).json({ message: "Chưa có tài khoản nào!" });
-      }
       return res.status(200).json(result);
     } catch (error) {
       res.status(500).json(error.message);
@@ -287,6 +280,9 @@ const UserController = {
           expiresAt,
         },
       });
+
+      user.userStatus = "active";
+      await user.save();
       return res.status(200).json({
         message: "Đăng nhập thành công!",
         code: "Success",
@@ -296,6 +292,21 @@ const UserController = {
       });
     } catch (error) {
       res.status(500).json(error.message);
+    }
+  },
+  logout: async (req, res) => {
+    try {
+      const { phone } = req.params;
+      const user = await User.findOne({ userPhone: phone });
+
+      if (!user) {
+        return res.status(500).json({ message: "Người dùng không tồn tại!" });
+      }
+      user.userStatus = "deactive";
+      await user.save();
+      res.status(200).json(user);
+    } catch (error) {
+      res.status(500).json(error);
     }
   },
   getUserByQuery: async (req, res) => {
@@ -308,8 +319,6 @@ const UserController = {
       let searchCondition = {};
       if (id) {
         searchCondition = { userId: id.trim() };
-      } else if (email) {
-        searchCondition = { userEmail: email.trim() };
       } else if (phone) {
         searchCondition = { userPhone: phone.trim() };
       }
@@ -318,13 +327,93 @@ const UserController = {
         return res.status(400).json({ message: "Tài khoản không tồn tại!" });
       }
       const employee = await Employee.findOne({ userId: user.userId });
-      if (!driver) {
+      if (!employee) {
         return res.status(404).json({
-          message: "Tài xế không tồn tại!",
+          message: "Nhân viên không tồn tại!",
           search: searchCondition,
         });
       }
-      return res.status(200).json(driver);
+      return res.status(200).json({
+        user,
+        employee: employee,
+      });
+    } catch (error) {
+      res.status(500).json(error.message);
+    }
+  },
+  updateAccount: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { newPassword, newPhone, newEmail } = req.body;
+
+      // Tìm người dùng && chi tiết người dùng
+      const user = await User.findOne({ userId: id });
+      const employee = await Employee.findOne({ userId: id });
+      if (!user) {
+        return res.status(404).json({ message: "Tài khoản không tồn tại!" });
+      }
+      if (!employee) {
+        return res
+          .status(400)
+          .json({ message: "Tài khoản chưa có thông tin!" });
+      }
+
+      // Kiểm tra và lưu chỉnh sửa sđt nếu có cập nhật
+      if (newPhone !== undefined && newPhone !== "") {
+        if (!regexPhoneNumber(newPhone)) {
+          return res
+            .status(400)
+            .json({ message: "Số điện thoại không hợp lệ!" });
+        }
+        user.userPhone = newPhone;
+        employee.employeePhone = newPhone;
+      }
+      // Kiểm tra và lưu chỉnh sửa gmail nếu có cập nhật
+      if (newEmail !== undefined && newEmail !== "") {
+        if (!regexGmail(newEmail)) {
+          return res.status(400).json({ message: "Email không hợp lệ!" });
+        }
+        employee.employeeEmail = newEmail;
+      }
+      // Kiểm tra và lưu chỉnh sửa mật khẩu nếu có cập nhật
+      if (newPassword !== undefined && newPassword !== "") {
+        if (!checkPasswordStrong(newPassword)) {
+          return res.status(400).json({ message: "Mật khẩu chưa an toàn!" });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.userPassword = hashedPassword;
+      }
+
+      if (!newPassword && !newPhone && !newEmail) {
+        return res
+          .status(400)
+          .json({ message: "Không có trường nào thay đổi!" });
+      }
+
+      await user.save();
+      await employee.save();
+      return res
+        .status(200)
+        .json({ message: "Cập nhật thông tin thành công!" });
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+  },
+  deleteById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      // Tìm nhân viên và tài khoản nhân viên cần xóa
+      const user = await User.findOne({ userId: id });
+      if (!user) {
+        return res.status(404).json({ message: "Tài khoản không tồn tại!" });
+      }
+      // Xóa tài khoản và nhân viên
+      const deleteUser = User.deleteOne({ userId: id });
+      const deleteEmployee = Employee.deleteOne({ userId: id });
+      await Promise.all([deleteUser, deleteEmployee]);
+      return res
+        .status(200)
+        .json({ message: "Xóa tài khoản và thông tin thành công!" });
     } catch (error) {
       res.status(500).json(error.message);
     }

@@ -281,15 +281,16 @@ const OrderController = {
     try {
       // Lấy ngày hiện tại và 7 ngày trước
       const today = new Date();
-      const fiveDaysAgo = new Date(today);
-      fiveDaysAgo.setDate(today.getDate() - 9); // Lấy ngày 7 ngày trước
+      const sevenDaysAgo = new Date(today);
+      console.log(sevenDaysAgo);
+      sevenDaysAgo.setDate(today.getDate() - 6); // Lấy ngày 7 ngày trước
 
       // Truy vấn để lấy tổng tiền mỗi ngày trong 7 ngày gần nhất
       const result = await Order.aggregate([
         {
           // Lọc các đơn hàng có createdDate trong 7 ngày gần nhất
           $match: {
-            createdDate: { $gte: fiveDaysAgo, $lte: today },
+            createdDate: { $gte: sevenDaysAgo, $lte: today },
           },
         },
         {
@@ -318,8 +319,25 @@ const OrderController = {
         },
       ]);
 
+      // Tạo danh sách 7 ngày gần nhất
+      const allDates = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(sevenDaysAgo);
+        date.setDate(sevenDaysAgo.getDate() + i);
+        allDates.push(date.toISOString().split("T")[0]); // Chuyển thành định dạng YYYY-MM-DD
+      }
+
+      // Đảm bảo kết quả có đầy đủ ngày
+      const completeResult = allDates.map((date) => {
+        const found = result.find((r) => r._id === date);
+        return {
+          date,
+          deliverPrice: found ? found.deliverPrice : 0, // Nếu không có, đặt deliverPrice là 0
+        };
+      });
+
       // Gửi kết quả về frontend
-      res.status(200).json(result);
+      res.status(200).json(completeResult);
     } catch (error) {
       res.status(500).json({ message: "Lỗi truy vấn: " + error.message });
     }
@@ -379,6 +397,87 @@ const OrderController = {
       res.status(200).json(rankings);
     } catch (error) {
       res.status(500).json({ error: error.message }); // Xử lý lỗi
+    }
+  },
+  getOrderDetails: async (req, res) => {
+    try {
+      const { id } = req.query;
+      if (!id) {
+        return res.status(400).json({ message: "Vui lòng nhập mã đơn hàng!" });
+      }
+      const order = await Order.aggregate([
+        {
+          $match: { orderId: id },
+        },
+        {
+          $lookup: {
+            from: "Customer",
+            localField: "cusId",
+            foreignField: "cusId",
+            as: "customerDetails",
+          },
+        },
+        {
+          $lookup: {
+            from: "Driver",
+            localField: "driverId",
+            foreignField: "driverId",
+            as: "driverDetails",
+          },
+        },
+        {
+          $lookup: {
+            from: "OrderDetail",
+            localField: "orderId",
+            foreignField: "Order_ID",
+            as: "items",
+          },
+        },
+        {
+          $unwind: {
+            path: "$customerDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$driverDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            orderId: 1,
+            cusId: 1,
+            senderAddress: 1,
+            receiverPhone: 1,
+            receiverName: 1,
+            receiverAddress: 1,
+            orderType: 1,
+            orderIsFragile: 1,
+            orderNote: 1,
+            orderCOD: 1,
+            dservicesId: 1,
+            totalPrice: 1,
+            paymentId: 1,
+            orderStatusId: 1,
+            driverId: 1,
+            createdDate: 1,
+            deliverPrice: 1,
+            proofSuccess: 1,
+            reasonFailed: 1,
+            customerDetails: 1,
+            driverDetails: 1,
+            items: 1,
+          },
+        },
+      ]);
+
+      if (!order || order.length === 0) {
+        return res.status(400).json({ message: "Đơn hàng không tồn tại!" });
+      }
+      res.status(200).json(order[0]);
+    } catch (error) {
+      res.status(500).json(error.message);
     }
   },
 };
